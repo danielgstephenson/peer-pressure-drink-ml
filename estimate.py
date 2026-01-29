@@ -49,7 +49,7 @@ class Model(nn.Module):
 dataset = TensorDataset(target, treatment, covars)
 
 def get_counterfactual_predictions(observation: int, trials = 100, batch_count= 50):
-    test_dataset = Subset(dataset,[100])
+    test_dataset = Subset(dataset,[observation])
     train_dataset = Subset(dataset,[i for i in range(len(dataset)) if i != observation])
     test_dataloader = DataLoader(
         test_dataset,
