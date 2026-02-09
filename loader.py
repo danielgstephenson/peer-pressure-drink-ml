@@ -31,6 +31,7 @@ for col in category_df.columns:
 
 target = numeric_normal[:,0].unsqueeze(1).to(device)
 treatment = one_hot_tensors[0].to(device)
+treatment_names = [name for name in category_df['treatment'].cat.categories]
 
 numeric_covars = numeric_normal[:,1:]
 one_hot_covars = torch.cat(one_hot_tensors[1:],dim=1)

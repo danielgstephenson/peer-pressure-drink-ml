@@ -5,8 +5,9 @@ from torch import LongTensor, nn, Tensor
 import torch.nn.functional as F
 from torch.utils.data import random_split, TensorDataset, DataLoader, Subset
 import matplotlib.pyplot as plt
+import numpy as np
 
-from loader import target, treatment, covars
+from loader import target, treatment, covars, treatment_names
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("device = " + str(device))
@@ -107,7 +108,14 @@ for observation in range(len(dataset)):
 print(test_loss_matrix)
 mean_loss_path = torch.mean(test_loss_matrix,dim=1).cpu().numpy()
 mean_output_path = torch.mean(output_matrix,dim=1).cpu().numpy()
-mean_output_path[-1,:]
+predictions = mean_output_path[-1,:]
+
+x_pos = np.arange(len(treatment_names))
+plt.bar(x_pos, predictions, align='center', alpha=0.7)
+plt.axhline(0, color='black', linewidth=0.8)
+plt.xticks(x_pos, treatment_names)
+plt.ylabel('Treatment')
+plt.show()
 
 plt.plot(mean_loss_path)
 plt.show()
