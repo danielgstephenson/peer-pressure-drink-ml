@@ -92,10 +92,7 @@ def get_observation_path(observation: int, trial_count = 10, step_count= 50):
                 repeat_covars = test_covars.repeat([4,1])
                 outputs = model(treatments, repeat_covars)
                 output_path[step, trial, :] = outputs[:,0]
-    # observation_loss_path = torch.mean(test_loss_path,dim=1)
-    # observation_output_path = torch.mean(output_path,dim=1)
     return output_path, test_loss_path
-
 
 trial_count = 5
 step_count = 40
@@ -112,7 +109,8 @@ mean_output_path = torch.mean(output_tensor,dim=2).cpu().numpy()
 predictions = mean_output_path[-1,:,:]
 mean_predictions = np.mean(predictions,0)
 std_predictions = np.std(predictions,0)
-print(std_predictions)
+std_mean_predictions = np.std(mean_predictions)
+print(std_predictions / std_mean_predictions) # measurement error / effect size
 
 x_pos = np.arange(len(treatment_names))
 
