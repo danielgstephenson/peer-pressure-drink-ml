@@ -7,7 +7,7 @@ from torch.utils.data import random_split, TensorDataset, DataLoader, Subset
 import matplotlib.pyplot as plt
 import numpy as np
 
-from loader import target, treatment, covars, treatment_names
+from loader import target, treatment, covars, treatment_names, treatment_codes
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print("device = " + str(device))
@@ -21,16 +21,17 @@ torch.set_printoptions(sci_mode=False)
 # setup training and testing data randomization
 # produce out of sample predictions
 # identify the early stopping time (Around 40)
+# measure treatment effects using counterfactal predictions
 
 # TO DO:
-# measure treatment effects using counterfactal predictions
+# estimate the variance of the predictions
+# select the number of trials
 # permutation test to identify significance
 # reconsider which variables to include (include only relevant variables)
 
 input_size = treatment.shape[1] + covars.shape[1]
 hidden_layer_count = 4
 hidden_layer_size = 100
-
 
 class Model(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
@@ -91,27 +92,31 @@ def get_observation_path(observation: int, trial_count = 10, step_count= 50):
                 repeat_covars = test_covars.repeat([4,1])
                 outputs = model(treatments, repeat_covars)
                 output_path[step, trial, :] = outputs[:,0]
-    observation_loss_path = torch.mean(test_loss_path,dim=1)
-    observation_output_path = torch.mean(output_path,dim=1)
-    return observation_output_path, observation_loss_path
+    # observation_loss_path = torch.mean(test_loss_path,dim=1)
+    # observation_output_path = torch.mean(output_path,dim=1)
+    return output_path, test_loss_path
 
-trials = 2
+
+trial_count = 5
 step_count = 40
-test_loss_matrix = torch.zeros(step_count, len(dataset)).to(device)
-output_matrix = torch.zeros(step_count, len(dataset), 4).to(device)
+test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
+output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
 for observation in range(len(dataset)):
-    output_path, test_loss_path = get_observation_path(observation,trials,step_count)
+    output_path, test_loss_path = get_observation_path(observation,trial_count,step_count)
     stop_time = torch.argmin(test_loss_path,dim=0)
-    test_loss_matrix[:,observation] = test_loss_path
-    output_matrix[:,observation,:] = output_path
+    test_loss_tensor[:,:,observation] = test_loss_path
+    output_tensor[:,:,observation,:] = output_path
     print(f'observation: {observation+1} / {len(dataset)}, stop_time: {stop_time}')
-print(test_loss_matrix)
-mean_loss_path = torch.mean(test_loss_matrix,dim=1).cpu().numpy()
-mean_output_path = torch.mean(output_matrix,dim=1).cpu().numpy()
-predictions = mean_output_path[-1,:]
+mean_loss_path = torch.mean(test_loss_tensor,dim=[1,2]).cpu().numpy()
+mean_output_path = torch.mean(output_tensor,dim=2).cpu().numpy()
+predictions = mean_output_path[-1,:,:]
+mean_predictions = np.mean(predictions,0)
+std_predictions = np.std(predictions,0)
+print(std_predictions)
 
 x_pos = np.arange(len(treatment_names))
-plt.bar(x_pos, predictions, align='center', alpha=0.7)
+
+plt.bar(x_pos, mean_predictions, align='center', alpha=0.7)
 plt.axhline(0, color='black', linewidth=0.8)
 plt.xticks(x_pos, treatment_names)
 plt.ylabel('Treatment')

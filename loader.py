@@ -1,7 +1,9 @@
+import string
 import torch
 from torch import Tensor
 import torch.nn.functional as F
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 from pandas.api.types import is_numeric_dtype, is_string_dtype
 
@@ -31,7 +33,8 @@ for col in category_df.columns:
 
 target = numeric_normal[:,0].unsqueeze(1).to(device)
 treatment = one_hot_tensors[0].to(device)
-treatment_names = [name for name in category_df['treatment'].cat.categories]
+treatment_codes = np.array([code for code in category_df['treatment'].cat.codes])
+treatment_names =[name for name in category_df['treatment'].cat.categories]
 
 numeric_covars = numeric_normal[:,1:]
 one_hot_covars = torch.cat(one_hot_tensors[1:],dim=1)
