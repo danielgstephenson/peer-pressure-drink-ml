@@ -22,12 +22,12 @@ torch.set_printoptions(sci_mode=False)
 # produce out of sample predictions
 # identify the early stopping time (Around 40)
 # measure treatment effects using counterfactal predictions
+# estimate the variance of the predictions (i.e. measurement error)
 
 # TO DO:
-# estimate the variance of the predictions
-# select the number of trials
 # permutation test to identify significance
-# reconsider which variables to include (include only relevant variables)
+# increase the number of trials (to reduce measurement error)
+# consider which variables to include (include only relevant variables)
 
 input_size = treatment.shape[1] + covars.shape[1]
 hidden_layer_count = 4
@@ -94,8 +94,9 @@ def get_observation_path(observation: int, trial_count = 10, step_count= 50):
                 output_path[step, trial, :] = outputs[:,0]
     return output_path, test_loss_path
 
-trial_count = 5
+
 step_count = 40
+trial_count = 5
 test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
 output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
 for observation in range(len(dataset)):
@@ -109,8 +110,6 @@ mean_output_path = torch.mean(output_tensor,dim=2).cpu().numpy()
 predictions = mean_output_path[-1,:,:]
 mean_predictions = np.mean(predictions,0)
 std_predictions = np.std(predictions,0)
-std_mean_predictions = np.std(mean_predictions)
-print(std_predictions / std_mean_predictions) # measurement error / effect size
 
 x_pos = np.arange(len(treatment_names))
 
@@ -118,7 +117,4 @@ plt.bar(x_pos, mean_predictions, align='center', alpha=0.7)
 plt.axhline(0, color='black', linewidth=0.8)
 plt.xticks(x_pos, treatment_names)
 plt.ylabel('Treatment')
-plt.show()
-
-plt.plot(mean_loss_path)
 plt.show()
