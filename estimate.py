@@ -110,6 +110,7 @@ mean_output_path = torch.mean(output_tensor,dim=2).cpu().numpy()
 predictions = mean_output_path[-1,:,:]
 mean_predictions = np.mean(predictions,0)
 std_predictions = np.std(predictions,0)
+effect_estimate = mean_predictions[3] - mean_predictions[2]
 
 x_pos = np.arange(len(treatment_names))
 
@@ -117,4 +118,6 @@ plt.bar(x_pos, mean_predictions, align='center', alpha=0.7)
 plt.axhline(0, color='black', linewidth=0.8)
 plt.xticks(x_pos, treatment_names)
 plt.ylabel('Treatment')
+plt.scatter(x_pos,mean_predictions+std_predictions)
+plt.scatter(x_pos,mean_predictions-std_predictions)
 plt.show()
