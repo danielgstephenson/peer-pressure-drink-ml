@@ -1,5 +1,6 @@
 from math import sqrt
-from numpy import tri
+from random import shuffle
+from numpy import ndarray, tri
 import torch
 from torch import LongTensor, nn, Tensor
 import torch.nn.functional as F
@@ -55,7 +56,7 @@ class Model(nn.Module):
 
 dataset = TensorDataset(target, treatment, covars)
 
-def get_observation_path(observation: int, trial_count = 10, step_count= 50):
+def get_output_path(dataset: TensorDataset, observation: int, trial_count = 10, step_count= 50):
     test_dataset = Subset(dataset,[observation])
     train_dataset = Subset(dataset,[i for i in range(len(dataset)) if i != observation])
     test_dataloader = DataLoader(
@@ -94,30 +95,56 @@ def get_observation_path(observation: int, trial_count = 10, step_count= 50):
                 output_path[step, trial, :] = outputs[:,0]
     return output_path, test_loss_path
 
+def get_shuffled_dataset() -> TensorDataset:
+    shuffled_treatment = treatment.clone()
+    original_indices = np.where((treatment_codes == 2) | (treatment_codes == 3))[0]
+    shuffled_indices = np.random.permutation(original_indices)
+    shuffled_treatment[original_indices,:] = shuffled_treatment[shuffled_indices,:]
+    shuffled_dataset = TensorDataset(target, shuffled_treatment, covars)
+    return shuffled_dataset
 
-step_count = 40
-trial_count = 5
-test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
-output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
-for observation in range(len(dataset)):
-    output_path, test_loss_path = get_observation_path(observation,trial_count,step_count)
-    stop_time = torch.argmin(test_loss_path,dim=0)
-    test_loss_tensor[:,:,observation] = test_loss_path
-    output_tensor[:,:,observation,:] = output_path
-    print(f'observation: {observation+1} / {len(dataset)}, stop_time: {stop_time}')
-mean_loss_path = torch.mean(test_loss_tensor,dim=[1,2]).cpu().numpy()
-mean_output_path = torch.mean(output_tensor,dim=2).cpu().numpy()
-predictions = mean_output_path[-1,:,:]
-mean_predictions = np.mean(predictions,0)
-std_predictions = np.std(predictions,0)
-effect_estimate = mean_predictions[3] - mean_predictions[2]
+def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -> np.ndarray:
+    test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
+    output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
+    for observation in range(len(dataset)):
+        output_path, test_loss_path = get_output_path(dataset, observation,trial_count,step_count)
+        stop_time = torch.argmin(test_loss_path,dim=0)
+        test_loss_tensor[:,:,observation] = test_loss_path
+        output_tensor[:,:,observation,:] = output_path
+        print(f'observation: {observation+1} / {len(dataset)}, stop_time: {stop_time}')
+    predictions = output_tensor[-1,:,:,:].cpu().numpy()
+    return predictions
 
-x_pos = np.arange(len(treatment_names))
+# def get_shuffled_effect_estimates(step_count=40, predict_count=20, permute_count=5000) -> np.ndarray:
+step_count=40
+predict_count=5
+permute_count=5
+effect_estimates = np.zeros(permute_count) 
+for i in range(permute_count):
+    print(f'Permutation Trial {i+1}')
+    shuffled_dataset = get_shuffled_dataset()
+    predictions = get_predictions(shuffled_dataset, step_count=40, trial_count=5)
+    trial_predictions = np.mean(predictions,1) 
+    mean_predictions = np.mean(trial_predictions,0)
+    effect_estimate = mean_predictions[3] - mean_predictions[2]
+    effect_estimates[i] = effect_estimate
 
-plt.bar(x_pos, mean_predictions, align='center', alpha=0.7)
-plt.axhline(0, color='black', linewidth=0.8)
-plt.xticks(x_pos, treatment_names)
-plt.ylabel('Treatment')
-plt.scatter(x_pos,mean_predictions+std_predictions)
-plt.scatter(x_pos,mean_predictions-std_predictions)
-plt.show()
+print(effect_estimates)
+
+# predictions = get_predictions(dataset, step_count=40, trial_count=5)
+# trial_predictions = np.mean(predictions,1) 
+# mean_predictions = np.mean(trial_predictions,0)
+# std_predictions = np.std(trial_predictions,0)
+# effect_estimate = mean_predictions[3] - mean_predictions[2]
+
+# x_pos = np.arange(len(treatment_names))
+# plt.bar(x_pos, mean_predictions, align='center', alpha=0.7)
+# plt.axhline(0, color='black', linewidth=0.8)
+# plt.xticks(x_pos, treatment_names)
+# plt.ylabel('Treatment')
+# plt.scatter(x_pos,mean_predictions+std_predictions)
+# plt.scatter(x_pos,mean_predictions-std_predictions)
+# plt.show()
+
+# plt.plot(mean_loss_path)
+# plt.show()
