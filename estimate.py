@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from torch.utils.data import random_split, TensorDataset, DataLoader, Subset
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from loader import target, treatment, covars, treatment_names, treatment_codes
 
@@ -130,6 +131,7 @@ for i in range(permute_count):
     effect_estimates[i] = effect_estimate
 
 print(effect_estimates)
+pd.DataFrame(effect_estimates, columns=["effect_estimate"]).to_csv("data/effect_estimates.csv", index_label="permutation")
 
 # predictions = get_predictions(dataset, step_count=40, trial_count=5)
 # trial_predictions = np.mean(predictions,1) 
