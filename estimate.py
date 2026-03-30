@@ -115,9 +115,8 @@ def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -
     predictions = output_tensor[-1,:,:,:].cpu().numpy()
     return predictions
 
-# def get_shuffled_effect_estimates(step_count=40, predict_count=20, permute_count=5000) -> np.ndarray:
+# def get_shuffled_effect_estimates(step_count=40, permute_count=5000) -> np.ndarray:
 step_count=40
-predict_count=5
 permute_count=5
 effect_estimates = np.zeros(permute_count) 
 for i in range(permute_count):
@@ -130,6 +129,10 @@ for i in range(permute_count):
     effect_estimates[i] = effect_estimate
 
 print(effect_estimates)
+
+# >>> print(effect_estimates)
+# [-0.11715002  0.09962441 -0.02398598  0.03438779 -0.1780526 ]
+# [ 0.04274881 -0.04835736  0.05387061  0.1910139  -0.04945911]
 
 # predictions = get_predictions(dataset, step_count=40, trial_count=5)
 # trial_predictions = np.mean(predictions,1) 
