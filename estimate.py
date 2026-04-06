@@ -1,10 +1,8 @@
-from math import sqrt
-from random import shuffle
-from numpy import ndarray, tri
+import sys
 import torch
-from torch import LongTensor, nn, Tensor
+from torch import nn, Tensor
 import torch.nn.functional as F
-from torch.utils.data import random_split, TensorDataset, DataLoader, Subset
+from torch.utils.data import TensorDataset, DataLoader, Subset
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -95,7 +93,7 @@ def get_output_path(dataset: TensorDataset, observation: int, trial_count = 10, 
                 output_path[step, trial, :] = outputs[:,0]
     return output_path, test_loss_path
 
-def get_shuffled_dataset() -> TensorDataset:
+def get_permute_dataset() -> TensorDataset:
     shuffled_treatment = treatment.clone()
     original_indices = np.where((treatment_codes == 2) | (treatment_codes == 3))[0]
     shuffled_indices = np.random.permutation(original_indices)
@@ -108,27 +106,50 @@ def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -
     output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
     for observation in range(len(dataset)):
         output_path, test_loss_path = get_output_path(dataset, observation,trial_count,step_count)
-        stop_time = torch.argmin(test_loss_path,dim=0)
         test_loss_tensor[:,:,observation] = test_loss_path
         output_tensor[:,:,observation,:] = output_path
-        print(f'observation: {observation+1} / {len(dataset)}, stop_time: {stop_time}')
+        print('.',end='',flush=True)
     predictions = output_tensor[-1,:,:,:].cpu().numpy()
     return predictions
 
-# def get_shuffled_effect_estimates(step_count=40, permute_count=5000) -> np.ndarray:
+# Proposed Test Statistic: Count the number of individuals with a positive causal impact estimate
+
 step_count=40
 permute_count=5
-effect_estimates = np.zeros(permute_count) 
-for i in range(permute_count):
-    print(f'Permutation Trial {i+1}')
-    shuffled_dataset = get_shuffled_dataset()
-    predictions = get_predictions(shuffled_dataset, step_count=40, trial_count=5)
-    trial_predictions = np.mean(predictions,1) 
-    mean_predictions = np.mean(trial_predictions,0)
-    effect_estimate = mean_predictions[3] - mean_predictions[2]
-    effect_estimates[i] = effect_estimate
+trial_count=5
 
-print(effect_estimates)
+# original_dataset = TensorDataset(target, treatment, covars)
+# original_predictions = get_predictions(original_dataset, step_count, trial_count)
+# original_estimate_file = open('output/original_estimates.csv', mode='a', buffering=1) 
+# original_sign_count_file = open('output/original_sign_count.csv', mode='a', buffering=1) 
+# original_predictions = np.mean(original_predictions,0)
+# original_effect_estimates = original_predictions[:,3] - original_predictions[:,2]
+# original_effect_string = ",".join([str(x) for x in original_effect_estimates])
+# original_estimate_file.write(original_effect_string+'\n')
+# original_sign_count = np.sum(np.sign(original_effect_estimates))
+# original_sign_count_file.write(f'{original_sign_count}\n')
+
+# DEVELOP: def get_shuffled_effect_estimates(step_count=40, permute_count=5000) -> np.ndarray:
+permute_sign_counts = np.zeros(permute_count)
+permute_estimate_file = open('output/permute_estimates.csv', mode='a', buffering=1) 
+permute_sign_count_file = open('output/permute_sign_count.csv', mode='a', buffering=1) 
+print(f'Begin Permutation Test')
+for i in range(permute_count):
+    permute_dataset = get_permute_dataset()
+    permute_predictions = get_predictions(permute_dataset, step_count, trial_count)
+    permute_predictions = np.mean(permute_predictions,0)
+    permute_effect_estimates = permute_predictions[:,3] - permute_predictions[:,2]
+    permute_effect_string = ",".join([str(x) for x in permute_effect_estimates])
+    permute_estimate_file.write(permute_effect_string+'\n')
+    permute_sign_count = np.sum(np.sign(permute_effect_estimates))
+    permute_sign_count_file.write(f'{permute_sign_count}\n')
+    permute_sign_counts[i] = permute_sign_count
+    print(f'Permutation Trial {i+1}: {permute_sign_count}')
+
+# original_predictions = np.mean(original_predictions,0)
+# original_effect_estimates = original_predictions[:,3] - original_predictions[:,2]
+# plt.hist(original_effect_estimates)
+# plt.show()
 
 # >>> print(effect_estimates)
 # [-0.11715002  0.09962441 -0.02398598  0.03438779 -0.1780526 ]
@@ -149,5 +170,4 @@ print(effect_estimates)
 # plt.scatter(x_pos,mean_predictions-std_predictions)
 # plt.show()
 
-# plt.plot(mean_loss_path)
-# plt.show()
+
