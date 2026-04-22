@@ -101,7 +101,7 @@ def get_permute_dataset() -> TensorDataset:
     shuffled_dataset = TensorDataset(target, shuffled_treatment, covars)
     return shuffled_dataset
 
-def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -> np.ndarray:
+def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -> tuple[Tensor, ...]:
     test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
     output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
     for observation in range(len(dataset)):
@@ -109,62 +109,43 @@ def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -
         test_loss_tensor[:,:,observation] = test_loss_path
         output_tensor[:,:,observation,:] = output_path
         if observation % 2 == 0: print('.',end='',flush=True)
-    predictions = output_tensor[-1,:,:,:].cpu().numpy()
+    final_predictions = output_tensor[-1,:,:,:]
+    final_test_loss = test_loss_tensor[-1,:,:]
     print('\n')
-    return predictions
+    return final_predictions, final_test_loss
 
 # Proposed Test Statistic: Count the number of individuals with a positive causal impact estimate
 
-step_count=40
-permute_count=5
-trial_count=5
+step_count = 40
+permutation_count = 1000
+trial_count = 10
+
+# test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
+# output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
+# for observation in range(len(dataset)):
+#     output_path, test_loss_path = get_output_path(dataset, observation,trial_count,step_count)
+#     test_loss_tensor[:,:,observation] = test_loss_path
+#     output_tensor[:,:,observation,:] = output_path
+#     if observation % 2 == 0: print('.',end='',flush=True)
+# final_predictions = output_tensor[-1,:,:,:]
+# final_test_loss = test_loss_tensor[-1,:,:]
+# final_test_loss.shape
+# trial_test_loss = torch.mean(final_test_loss,dim=1)
+# mean_test_loss = torch.mean(final_test_loss)
+# original_test_loss_file = open('output/original_test_loss.csv', mode='a', buffering=1)
+# original_test_loss_file.write(f'{mean_test_loss.item()}\n')
 
 original_dataset = TensorDataset(target, treatment, covars)
-original_predictions = get_predictions(original_dataset, step_count, trial_count)
-original_estimate_file = open('output/original_estimates.csv', mode='a', buffering=1) 
-original_sign_count_file = open('output/original_sign_count.csv', mode='a', buffering=1) 
-original_predictions = np.mean(original_predictions,0)
-original_effect_estimates = original_predictions[:,3] - original_predictions[:,2]
-original_effect_string = ",".join([str(x) for x in original_effect_estimates])
-original_estimate_file.write(original_effect_string+'\n')
-original_sign_count = np.sum(np.sign(original_effect_estimates))
-original_sign_count_file.write(f'{original_sign_count}\n')
+original_predictions, original_test_loss = get_predictions(original_dataset, step_count, trial_count)
+original_mean_test_loss = torch.mean(original_test_loss).item()
+original_test_loss_file = open('output/original_test_loss.csv', mode='a', buffering=1)
+original_test_loss_file.write(f'{original_mean_test_loss}\n')
 
-# DEVELOP: def get_shuffled_effect_estimates(step_count=40, permute_count=5000) -> np.ndarray:
-permute_sign_counts = np.zeros(permute_count)
-permute_estimate_file = open('output/permute_estimates.csv', mode='a', buffering=1) 
-permute_sign_count_file = open('output/permute_sign_count.csv', mode='a', buffering=1) 
+permute_test_loss_file = open('output/permute_test_loss.csv', mode='a', buffering=1) 
 print(f'Begin Permutation Test')
-for i in range(permute_count):
+for i in range(permutation_count):
     permute_dataset = get_permute_dataset()
-    permute_predictions = get_predictions(permute_dataset, step_count, trial_count)
-    permute_predictions = np.mean(permute_predictions,0)
-    permute_effect_estimates = permute_predictions[:,3] - permute_predictions[:,2]
-    permute_effect_string = ",".join([str(x) for x in permute_effect_estimates])
-    permute_estimate_file.write(permute_effect_string+'\n')
-    permute_sign_count = np.sum(np.sign(permute_effect_estimates))
-    permute_sign_count_file.write(f'{permute_sign_count}\n')
-    permute_sign_counts[i] = permute_sign_count
-    print(f'Permutation Trial {i+1}: {permute_sign_count}')
-
-# original_predictions = np.mean(original_predictions,0)
-# original_effect_estimates = original_predictions[:,3] - original_predictions[:,2]
-# plt.hist(original_effect_estimates)
-# plt.show()
-
-# predictions = get_predictions(dataset, step_count=40, trial_count=5)
-# trial_predictions = np.mean(predictions,1) 
-# mean_predictions = np.mean(trial_predictions,0)
-# std_predictions = np.std(trial_predictions,0)
-# effect_estimate = mean_predictions[3] - mean_predictions[2]
-
-# x_pos = np.arange(len(treatment_names))
-# plt.bar(x_pos, mean_predictions, align='center', alpha=0.7)
-# plt.axhline(0, color='black', linewidth=0.8)
-# plt.xticks(x_pos, treatment_names)
-# plt.ylabel('Treatment')
-# plt.scatter(x_pos,mean_predictions+std_predictions)
-# plt.scatter(x_pos,mean_predictions-std_predictions)
-# plt.show()
-
-
+    permute_predictions, permute_test_loss = get_predictions(permute_dataset, step_count, trial_count)
+    mean_permute_test_loss = torch.mean(permute_test_loss).item()
+    permute_test_loss_file.write(f'{mean_permute_test_loss}\n')
+    print(f'Permutation Trial {i+1}: {mean_permute_test_loss}')
