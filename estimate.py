@@ -114,10 +114,8 @@ def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -
     print('\n')
     return final_predictions, final_test_loss
 
-# Proposed Test Statistic: Count the number of individuals with a positive causal impact estimate
-
 step_count = 40
-permutation_count = 1000
+permutation_count = 100
 trial_count = 10
 
 # test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
