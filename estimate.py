@@ -54,6 +54,7 @@ class Model(nn.Module):
 
 dataset = TensorDataset(target, treatment, covars)
 
+# Increase the step count from 50 to 100 if stopping times are picked separately for each trial.
 def get_output_path(dataset: TensorDataset, observation: int, trial_count = 10, step_count= 50):
     test_dataset = Subset(dataset,[observation])
     train_dataset = Subset(dataset,[i for i in range(len(dataset)) if i != observation])
@@ -118,20 +119,10 @@ step_count = 40
 permutation_count = 100
 trial_count = 10
 
-# test_loss_tensor = torch.zeros(step_count, trial_count, len(dataset)).to(device)
-# output_tensor = torch.zeros(step_count, trial_count, len(dataset), 4).to(device)
-# for observation in range(len(dataset)):
-#     output_path, test_loss_path = get_output_path(dataset, observation,trial_count,step_count)
-#     test_loss_tensor[:,:,observation] = test_loss_path
-#     output_tensor[:,:,observation,:] = output_path
-#     if observation % 2 == 0: print('.',end='',flush=True)
-# final_predictions = output_tensor[-1,:,:,:]
-# final_test_loss = test_loss_tensor[-1,:,:]
-# final_test_loss.shape
-# trial_test_loss = torch.mean(final_test_loss,dim=1)
-# mean_test_loss = torch.mean(final_test_loss)
-# original_test_loss_file = open('output/original_test_loss.csv', mode='a', buffering=1)
-# original_test_loss_file.write(f'{mean_test_loss.item()}\n')
+# Construct a modified dataset where the treatment variable is uniformly set to zero.
+# Collect multiple estimates of the test loss under each data set. (modified vs. original)
+# Pick the optimal stopping time separately for each trial. (to ensure trials are independent)
+# Use a Mann-Whitney test to compare the test loss distributions between the two datasets.
 
 original_dataset = TensorDataset(target, treatment, covars)
 original_predictions, original_test_loss = get_predictions(original_dataset, step_count, trial_count)
