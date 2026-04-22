@@ -108,8 +108,9 @@ def get_predictions(dataset: TensorDataset, step_count = 40, trial_count = 20) -
         output_path, test_loss_path = get_output_path(dataset, observation,trial_count,step_count)
         test_loss_tensor[:,:,observation] = test_loss_path
         output_tensor[:,:,observation,:] = output_path
-        print('.',end='',flush=True)
+        if observation % 2 == 0: print('.',end='',flush=True)
     predictions = output_tensor[-1,:,:,:].cpu().numpy()
+    print('\n')
     return predictions
 
 # Proposed Test Statistic: Count the number of individuals with a positive causal impact estimate
@@ -118,16 +119,16 @@ step_count=40
 permute_count=5
 trial_count=5
 
-# original_dataset = TensorDataset(target, treatment, covars)
-# original_predictions = get_predictions(original_dataset, step_count, trial_count)
-# original_estimate_file = open('output/original_estimates.csv', mode='a', buffering=1) 
-# original_sign_count_file = open('output/original_sign_count.csv', mode='a', buffering=1) 
-# original_predictions = np.mean(original_predictions,0)
-# original_effect_estimates = original_predictions[:,3] - original_predictions[:,2]
-# original_effect_string = ",".join([str(x) for x in original_effect_estimates])
-# original_estimate_file.write(original_effect_string+'\n')
-# original_sign_count = np.sum(np.sign(original_effect_estimates))
-# original_sign_count_file.write(f'{original_sign_count}\n')
+original_dataset = TensorDataset(target, treatment, covars)
+original_predictions = get_predictions(original_dataset, step_count, trial_count)
+original_estimate_file = open('output/original_estimates.csv', mode='a', buffering=1) 
+original_sign_count_file = open('output/original_sign_count.csv', mode='a', buffering=1) 
+original_predictions = np.mean(original_predictions,0)
+original_effect_estimates = original_predictions[:,3] - original_predictions[:,2]
+original_effect_string = ",".join([str(x) for x in original_effect_estimates])
+original_estimate_file.write(original_effect_string+'\n')
+original_sign_count = np.sum(np.sign(original_effect_estimates))
+original_sign_count_file.write(f'{original_sign_count}\n')
 
 # DEVELOP: def get_shuffled_effect_estimates(step_count=40, permute_count=5000) -> np.ndarray:
 permute_sign_counts = np.zeros(permute_count)
@@ -150,10 +151,6 @@ for i in range(permute_count):
 # original_effect_estimates = original_predictions[:,3] - original_predictions[:,2]
 # plt.hist(original_effect_estimates)
 # plt.show()
-
-# >>> print(effect_estimates)
-# [-0.11715002  0.09962441 -0.02398598  0.03438779 -0.1780526 ]
-# [ 0.04274881 -0.04835736  0.05387061  0.1910139  -0.04945911]
 
 # predictions = get_predictions(dataset, step_count=40, trial_count=5)
 # trial_predictions = np.mean(predictions,1) 
