@@ -33,7 +33,7 @@ class Model(nn.Module):
         return super().__call__(*args, **kwds)
 
 step_count = 40
-trial_count = 100
+trial_count = 20
 
 dataset = TensorDataset(target, treatment, covars)
 potential_treatments = torch.eye(4).to(device)
