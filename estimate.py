@@ -32,65 +32,51 @@ class Model(nn.Module):
     def __call__(self, *args, **kwds) -> Tensor:
         return super().__call__(*args, **kwds)
 
-def get_test_loss_path(dataset: TensorDataset, observation: int, step_count: int):
-    test_dataset = Subset(dataset,[observation])
-    train_dataset = Subset(dataset,[i for i in range(len(dataset)) if i != observation])
-    test_dataloader = DataLoader(
-        test_dataset,
-        batch_size=len(test_dataset),
-        shuffle=True
-    )
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=len(train_dataset),
-        shuffle=True
-    )
-    test_loss_path = torch.zeros(step_count).to(device)
-    model = Model().to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
-    for step in range(step_count):
-        train_batch: tuple[Tensor, Tensor, Tensor] = next(iter(train_dataloader))
-        train_target, train_treatment, train_covars = train_batch
-        train_output = model(train_treatment,train_covars)
-        train_loss = F.mse_loss(train_output, train_target)
-        train_loss.backward()
-        optimizer.step()
-        optimizer.zero_grad()
+step_count = 40
+trial_count = 100
+
+dataset = TensorDataset(target, treatment, covars)
+potential_treatments = torch.eye(4).to(device)
+
+estimate_file = open('output/estimates.csv', mode='a', buffering=1)
+_ = estimate_file.write('trial,observation,treatment1,treatment2,treatment3,treatment4\n')
+
+for trial in range(trial_count):
+    print(f'trial {trial + 1}')
+    _ = torch.manual_seed(trial)
+    torch.use_deterministic_algorithms(True)
+    for observation in range(len(dataset)):
+        if observation % 2 == 0: print('.',end='',flush=True)
+        test_dataset = Subset(dataset,[observation])
+        train_dataset = Subset(dataset,[i for i in range(len(dataset)) if i != observation])
+        test_dataloader = DataLoader(
+            test_dataset,
+            batch_size=len(test_dataset),
+            shuffle=True
+        )
+        train_dataloader = DataLoader(
+            train_dataset,
+            batch_size=len(train_dataset),
+            shuffle=True
+        )
+        model = Model().to(device)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+        for step in range(step_count):
+            train_batch: tuple[Tensor, Tensor, Tensor] = next(iter(train_dataloader))
+            train_target, train_treatment, train_covars = train_batch
+            train_output = model(train_treatment,train_covars)
+            train_loss = F.mse_loss(train_output, train_target)
+            train_loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
         with torch.no_grad():
             test_batch: tuple[Tensor, Tensor, Tensor] = next(iter(test_dataloader))
             test_target, test_treatment, test_covars = test_batch
             test_output = model(test_treatment, test_covars) 
-            test_loss = F.mse_loss(test_output, test_target)
-            test_loss_value = test_loss.detach().cpu().item()
-            test_loss_path[step] = test_loss_value
-    return test_loss_path
-
-def get_test_loss(dataset: TensorDataset, step_count: int) -> tuple[float, int]:
-    test_loss_tensor = torch.zeros(len(dataset),step_count).to(device)
-    for individual in range(len(dataset)):
-        test_loss_path = get_test_loss_path(dataset, individual,step_count)
-        test_loss_tensor[individual,:] = test_loss_path
-        if individual % 2 == 0: print('.',end='',flush=True)
-    mean_test_loss = torch.mean(test_loss_tensor,0)
-    test_loss = float(torch.min(mean_test_loss).item())
-    stop_time = int(torch.argmin(mean_test_loss).item())
+            test_loss = F.mse_loss(test_output, test_target).item()
+            repeat_covars = test_covars.repeat([4,1])
+            outputs = model(potential_treatments, repeat_covars).squeeze(1).tolist()
+            _ = estimate_file.write(f'{trial},{observation},{outputs[0]},{outputs[1]},{outputs[2]},{outputs[3]}\n')
     print('')
-    return test_loss, stop_time
+            
 
-step_count = 100
-trial_count = 100
-
-original_dataset = TensorDataset(target, treatment, covars)
-null_dataset = TensorDataset(target, 0*treatment, covars)
-original_test_loss_file = open('output/original_test_loss.csv', mode='a', buffering=1)
-null_test_loss_file = open('output/null_test_loss.csv', mode='a', buffering=1)
-
-for trial in range(trial_count):
-    original_test_loss, original_stop_time = get_test_loss(original_dataset, step_count)
-    print(f'original: test loss {original_test_loss:0.4f}, stop time {original_stop_time}')
-    original_test_loss_file.write(f'{original_test_loss},{original_stop_time}\n')
-    null_test_loss, null_stop_time = get_test_loss(null_dataset, step_count)
-    print(f'null: test loss {null_test_loss:0.4f}, stop time {null_stop_time}')
-    null_test_loss_file.write(f'{null_test_loss},{null_stop_time}\n')
-
-# The model makes more accurate predictions in the null_dataset
