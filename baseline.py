@@ -5,9 +5,6 @@ from loader import target, covars
 from seed import seed_everything
 import matplotlib.pyplot as plt
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-torch.set_default_device(device)
-print("device = " + str(device))
 torch.set_printoptions(sci_mode=False)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
@@ -43,10 +40,9 @@ class BaselineModel(nn.Module):
 test_losses = torch.zeros(trial_count, step_count)
 test_outputs = torch.zeros(trial_count, row_count, step_count)
 
-print('Training...')
 for trial in range(trial_count):
     print(f'trial {trial + 1}',end='',flush=True)
-    seed_everything(trial)
+    # seed_everything(trial)
     chunks = torch.chunk(torch.randperm(row_count), fold_count)
     for fold in range(fold_count):
         print('.',end='',flush=True)
@@ -75,6 +71,7 @@ print('Training Complete')
 
 loss_path = torch.mean(test_losses,dim=0)
 stop_time = int(torch.argmin(loss_path).item())
+print(f'stop time {stop_time}')
 
 outputs = torch.mean(test_outputs[:,:,stop_time],dim=0)
 targets = target.flatten()

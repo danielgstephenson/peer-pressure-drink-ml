@@ -6,6 +6,7 @@ import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+torch.set_default_device(device)
 print("device = " + str(device))
 torch.set_printoptions(sci_mode=False)
 
