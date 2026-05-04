@@ -1,7 +1,6 @@
 import torch
 from torch import Tensor
 import torch.nn.functional as F
-import numpy as np
 import pandas as pd
 from pandas.api.types import is_numeric_dtype
 
@@ -11,7 +10,6 @@ print("device = " + str(device))
 torch.set_printoptions(sci_mode=False)
 
 df = pd.read_csv('data/cleanData.csv')
-df.columns
 
 numeric_cols = [col for col in df.columns if is_numeric_dtype(df[col])]
 numeric_df = df[numeric_cols]
@@ -30,11 +28,12 @@ for col in category_df.columns:
     one_hot = F.one_hot(code_tensor).to(torch.float32)
     one_hot_tensors.append(one_hot)
 
-target = numeric_normal[:,0].unsqueeze(1).to(device)
-treatment = one_hot_tensors[0].to(device)
-treatment_codes = np.array([code for code in category_df['treatment'].cat.codes])
+outcome = numeric_normal[:,0].unsqueeze(1).to(device)
+treatment = torch.tensor([code for code in category_df['treatment'].cat.codes]).long()
+treatment_one_hot = one_hot_tensors[0].to(device)
 treatment_names =[name for name in category_df['treatment'].cat.categories]
 
 numeric_covars = numeric_normal[:,1:]
 one_hot_covars = torch.cat(one_hot_tensors[1:],dim=1)
 covars = torch.cat([numeric_covars,one_hot_covars],dim=1).to(device)
+row_count = covars.shape[0]
