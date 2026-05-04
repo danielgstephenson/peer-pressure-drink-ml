@@ -2,13 +2,12 @@ import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 from loader import outcome, covars, row_count
+from params import hidden_layer_count, hidden_layer_size, step_count, trial_count
 from seed import seed_everything
 import matplotlib.pyplot as plt
 
 torch.set_printoptions(sci_mode=False)
 
-hidden_layer_count = 4
-hidden_layer_size = 100
 class BaselineModel(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -29,8 +28,6 @@ class BaselineModel(nn.Module):
     def __call__(self, *args, **kwds) -> Tensor:
         return super().__call__(*args, **kwds)
 
-step_count = 80
-trial_count = 50
 test_losses = torch.zeros(trial_count, step_count)
 test_outputs = torch.zeros(trial_count, row_count, step_count)
 
@@ -81,5 +78,6 @@ for row in range(row_count):
 plt.clf()
 plt.plot(loss_path.tolist())
 plt.axvline(stop_time,color='blue')
+plt.ylim(top=loss_path.tolist()[0],bottom=min(loss_path.tolist()))
 plt.savefig('plots/outcome_loss.pdf')
 plt.clf()

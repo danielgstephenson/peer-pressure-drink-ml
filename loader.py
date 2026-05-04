@@ -32,6 +32,7 @@ outcome = numeric_normal[:,0].unsqueeze(1).to(device)
 treatment = torch.tensor([code for code in category_df['treatment'].cat.codes]).long()
 treatment_one_hot = one_hot_tensors[0].to(device)
 treatment_names =[name for name in category_df['treatment'].cat.categories]
+print(treatment_names)
 
 numeric_covars = numeric_normal[:,1:]
 one_hot_covars = torch.cat(one_hot_tensors[1:],dim=1)
