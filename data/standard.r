@@ -13,10 +13,10 @@ mspe = rep(0,n)
 for(i in 1:n) {
   trainData = standardData[-i,-c(1,2)]
   testData = standardData[i,-c(1,2)]
-  reg = lm(diverge  ~ ., data=trainData)
+  reg = lm(outcome  ~ ., data=trainData)
   output = predict(reg,testData)
   mspe[i] = (predict(reg,testData) - testData[1,1])^2
 }
 mean(mspe)
-target = standardData$diverge
+target = standardData$outcome
 mean((target-mean(target))^2)

@@ -2,7 +2,6 @@ outcomeData = read.csv('output/outcome.csv')
 treatmentData = read.csv('output/treatment.csv')
 standardData = read.csv('data/standardData.csv')
 
-
 plot(outcomeData$outcome, outcomeData$output)
 hist(treatmentData$treatment,prob=TRUE)
 hist(treatmentData$output,prob=TRUE)
