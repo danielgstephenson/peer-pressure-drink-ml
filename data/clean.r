@@ -1,6 +1,6 @@
 rawDf = read.table('experiment1.csv', sep='\t', header=TRUE, quote= '')
 
-keepNumericVars = c('measure2','measure1','selected','age','height',
+keepNumericVars = c('measure2','measure1','groupId','selected','age','height',
                     'weight','measure1GuessOwn','measure1GuessGroup', 'measure1GuessAll')
 keepCategoryVars = c('treatment','setting','female','student')
 keepVars = c(keepNumericVars,keepCategoryVars)
