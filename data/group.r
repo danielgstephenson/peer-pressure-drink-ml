@@ -28,11 +28,13 @@ for(g in 1:length(group)) {
   measure2 = cleanData$measure2[selection]
   mean1[g] = mean(measure1)
   mean2 = mean(measure2)
-  relativeMeasure1 = measure1 - mean1[g]
-  relativeMeasure2 = measure2 - mean2
-  dRelativeMeasure = relativeMeasure2 - relativeMeasure1
-  outcome[g] = mean(sign(relativeMeasure1*dRelativeMeasure)) # divergence
+  # relativeMeasure1 = measure1 - mean1[g]
+  # relativeMeasure2 = measure2 - mean2
+  # dRelativeMeasure = relativeMeasure2 - relativeMeasure1
+  # outcome[g] = mean(sign(relativeMeasure1)*dRelativeMeasure) # divergence
   sd1[g] = sd(measure1)
+  sd2 = sd(measure2)
+  outcome[g] = mean(sd2 - sd1) # divergence
   age[g] = mean(cleanData$age[selection])
   height[g] = mean(cleanData$height[selection])
   weight[g] = mean(cleanData$weight[selection])
